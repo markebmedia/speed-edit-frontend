@@ -18,11 +18,15 @@ export default function Home() {
 
     setLoading(true);
     const formData = new FormData();
-    formData.append('file', files[0]); // Only the first image for now
+    formData.append('file', files[0]);
 
     try {
+      // Use environment variables for backend URLs
+      const enhanceUrl = process.env.NEXT_PUBLIC_ENHANCE_URL!;
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL!;
+
       // 1. Enhance the image using FastAPI
-      const res = await axios.post('http://localhost:8000/enhance', formData, {
+      const res = await axios.post(`${enhanceUrl}/enhance`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -33,13 +37,13 @@ export default function Home() {
         throw new Error('Invalid enhancement response');
       }
 
-      const fullUrl = `http://localhost:8000${relativeUrl}`;
+      const fullUrl = `${enhanceUrl}${relativeUrl}`;
       setEnhancedPreviews([fullUrl]);
 
-      // 2. Create Stripe Checkout Session (NestJS)
+      // 2. Create Stripe Checkout Session via NestJS
       console.log('Sending imageUrl to backend:', fullUrl);
 
-      const checkout = await axios.post('https://speed-edit.onrender.com/payment/create-checkout', {
+      const checkout = await axios.post(`${apiUrl}/payment/create-checkout`, {
         imageUrl: fullUrl,
       });
 
@@ -102,4 +106,3 @@ export default function Home() {
     </main>
   );
 }
-
