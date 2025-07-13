@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
   images: {
-    domains: ['localhost'], // Add other domains as needed, e.g., your backend's Render domain
+    domains: ['swinir-api.onrender.com', 'speed-edit-backend.onrender.com'],
   },
 };
 
