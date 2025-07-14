@@ -1,6 +1,6 @@
 'use client';
 
-import Upload from './upload';
+import Upload from './upload/page';
 
 export default function HomePage() {
   return (

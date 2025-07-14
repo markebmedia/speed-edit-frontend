@@ -11,13 +11,13 @@ type CheckoutResponse = {
   url: string;
 };
 
-const Upload = () => {
+const Upload: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [imageType, setImageType] = useState<'standard' | 'bracketed'>('standard');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://speed-edit-backend.onrender.com';
+  const backendUrl: string = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://speed-edit-backend.onrender.com';
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0] || null;
@@ -40,7 +40,6 @@ const Upload = () => {
       formData.append('file', file);
       formData.append('imageType', imageType);
 
-      // Step 1: Upload image and get enhanced URL
       const enhanceRes = await axios.post<EnhanceResponse>(
         `${backendUrl}/enhance`,
         formData,
@@ -49,24 +48,24 @@ const Upload = () => {
         }
       );
 
-      if (!enhanceRes.data?.enhanced_url) {
+      const enhancedUrl = enhanceRes.data?.enhanced_url;
+      if (!enhancedUrl) {
         throw new Error('No enhanced URL returned');
       }
 
-      const enhancedUrl = `${backendUrl}${enhanceRes.data.enhanced_url}`;
+      const fullEnhancedUrl = `${backendUrl}${enhancedUrl}`;
 
-      // Step 2: Request Stripe Checkout session
       const checkoutRes = await axios.post<CheckoutResponse>(
         `${backendUrl}/payment/create-checkout`,
-        { imageUrl: enhancedUrl }
+        { imageUrl: fullEnhancedUrl }
       );
 
-      if (!checkoutRes.data?.url) {
+      const checkoutUrl = checkoutRes.data?.url;
+      if (!checkoutUrl) {
         throw new Error('Checkout URL not returned');
       }
 
-      // Step 3: Redirect to Stripe
-      window.location.href = checkoutRes.data.url;
+      window.location.href = checkoutUrl;
     } catch (error: any) {
       console.error('Upload error:', error);
       alert(error?.response?.data?.message || 'Something went wrong');
