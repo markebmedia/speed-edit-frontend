@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-type EnhanceResponse = {
-  enhanced_url: string;
+type UploadResponse = {
+  enhancedUrl: string;
 };
 
 type CheckoutResponse = {
@@ -17,7 +17,7 @@ const Upload: React.FC = () => {
   const [imageType, setImageType] = useState<'standard' | 'bracketed'>('standard');
   const [loading, setLoading] = useState<boolean>(false);
 
-  const backendUrl: string = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://speed-edit-backend.onrender.com';
+  const backendUrl: string = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0] || null;
@@ -32,7 +32,6 @@ const Upload: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!file) return;
-
     setLoading(true);
 
     try {
@@ -40,35 +39,32 @@ const Upload: React.FC = () => {
       formData.append('file', file);
       formData.append('imageType', imageType);
 
-      const enhanceRes = await axios.post<EnhanceResponse>(
-        `${backendUrl}/enhance`,
+      // Step 1: Upload to backend and get enhanced image URL
+      const uploadRes = await axios.post<UploadResponse>(
+        `${backendUrl}/upload`,
         formData,
         {
           headers: { 'Content-Type': 'multipart/form-data' },
         }
       );
 
-      const enhancedUrl = enhanceRes.data?.enhanced_url;
-      if (!enhancedUrl) {
-        throw new Error('No enhanced URL returned');
-      }
+      const enhancedUrl = uploadRes.data?.enhancedUrl;
+      if (!enhancedUrl) throw new Error('No enhanced URL returned from upload');
 
-      const fullEnhancedUrl = `${backendUrl}${enhancedUrl}`;
-
+      // Step 2: Trigger Stripe checkout using the enhanced image
       const checkoutRes = await axios.post<CheckoutResponse>(
         `${backendUrl}/payment/create-checkout`,
-        { imageUrl: fullEnhancedUrl }
+        { imageUrl: enhancedUrl }
       );
 
       const checkoutUrl = checkoutRes.data?.url;
-      if (!checkoutUrl) {
-        throw new Error('Checkout URL not returned');
-      }
+      if (!checkoutUrl) throw new Error('No checkout URL returned');
 
+      // Redirect to Stripe checkout
       window.location.href = checkoutUrl;
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      alert(error?.response?.data?.message || 'Something went wrong');
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      alert(err?.response?.data?.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }
@@ -116,3 +112,4 @@ const Upload: React.FC = () => {
 };
 
 export default Upload;
+
