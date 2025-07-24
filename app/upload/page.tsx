@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 
-export default function Page() {
+const Upload: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [method, setMethod] = useState<'localcv' | 'swinir' | 'both'>('localcv');
@@ -30,13 +30,14 @@ export default function Page() {
       formData.append('image', file);
       formData.append('method', method);
 
-      const response = await fetch(`${backendUrl}/upload`, {
+      const response = await fetch(`${backendUrl}/upload/test-upload`, {
         method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error('Enhancement failed');
+        const error = await response.json();
+        throw new Error(error.message || 'Enhancement failed');
       }
 
       const blob = await response.blob();
@@ -49,8 +50,7 @@ export default function Page() {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      console.error('❌ Upload error:', err);
-      alert(err?.message || 'Something went wrong');
+      alert(err.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }
@@ -88,12 +88,15 @@ export default function Page() {
       )}
 
       <button
-        className="px-6 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
         disabled={!file || loading}
         onClick={handleSubmit}
+        className="px-6 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
       >
         {loading ? 'Processing...' : 'Enhance & Download'}
       </button>
     </div>
   );
-}
+};
+
+export default Upload;
+
