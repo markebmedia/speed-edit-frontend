@@ -1,23 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import axios from 'axios';
 
-type UploadResponse = {
-  enhancedUrl: string;
-};
-
-type CheckoutResponse = {
-  url: string;
-};
-
-const Upload: React.FC = () => {
+export default function Page() {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
-  const [imageType, setImageType] = useState<'standard' | 'bracketed'>('standard');
+  const [method, setMethod] = useState<'localcv' | 'swinir' | 'both'>('localcv');
   const [loading, setLoading] = useState<boolean>(false);
 
-  // ✅ Make sure this matches your backend deployment
   const backendUrl: string = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,35 +27,30 @@ const Upload: React.FC = () => {
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('imageType', imageType);
+      formData.append('image', file);
+      formData.append('method', method);
 
-      // ✅ Step 1: Send to /enhance instead of /upload
-      const uploadRes = await axios.post<UploadResponse>(
-        `${backendUrl}/enhance`,
-        formData,
-        {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        }
-      );
+      const response = await fetch(`${backendUrl}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
 
-      const enhancedUrl = uploadRes.data?.enhancedUrl;
-      if (!enhancedUrl) throw new Error('No enhanced URL returned from backend');
+      if (!response.ok) {
+        throw new Error('Enhancement failed');
+      }
 
-      // ✅ Step 2: Send enhanced image URL to create Stripe checkout
-      const checkoutRes = await axios.post<CheckoutResponse>(
-        `${backendUrl}/payment/create-checkout`,
-        { imageUrl: enhancedUrl }
-      );
-
-      const checkoutUrl = checkoutRes.data?.url;
-      if (!checkoutUrl) throw new Error('No checkout URL returned');
-
-      // ✅ Step 3: Redirect to Stripe checkout
-      window.location.href = checkoutUrl;
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'enhanced.jpg';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      console.error('Upload error:', err);
-      alert(err?.response?.data?.message || 'Something went wrong');
+      console.error('❌ Upload error:', err);
+      alert(err?.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }
@@ -76,12 +61,13 @@ const Upload: React.FC = () => {
       <h1 className="text-2xl font-bold mb-4">Upload Property Photo</h1>
 
       <select
-        value={imageType}
-        onChange={(e) => setImageType(e.target.value as 'standard' | 'bracketed')}
+        value={method}
+        onChange={(e) => setMethod(e.target.value as 'localcv' | 'swinir' | 'both')}
         className="mb-4 block border border-gray-300 rounded p-2"
       >
-        <option value="standard">Standard</option>
-        <option value="bracketed">Bracketed HDR</option>
+        <option value="localcv">Local CV</option>
+        <option value="swinir">SwinIR</option>
+        <option value="both">Both (AI + CV)</option>
       </select>
 
       <input
@@ -106,11 +92,8 @@ const Upload: React.FC = () => {
         disabled={!file || loading}
         onClick={handleSubmit}
       >
-        {loading ? 'Processing...' : 'Enhance & Pay £1.99'}
+        {loading ? 'Processing...' : 'Enhance & Download'}
       </button>
     </div>
   );
-};
-
-export default Upload;
-
+}
